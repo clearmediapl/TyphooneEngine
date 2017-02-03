@@ -1,0 +1,180 @@
+/*******************************************************************/
+/* Filename:                  CPlayer.cpp                           */
+/* Author:                    Michal Szczepanowski                 */
+/* Last modification:         27.07.2006                           */
+/* Last revision:             27.07.2006                           */
+/* Revised by:                Michal Szczepanowski                 */
+/*******************************************************************/
+
+
+
+#include "CPlayer.h"
+#include "CCamera.h"
+
+
+// ---------------------------------------------------------
+// CPlayer::CPlayer()
+// constructor
+// ---------------------------------------------------------
+//
+CPlayer::CPlayer()
+{
+
+
+	m_yRot = 0;
+	
+	s = new CCamera();
+	m_matrix = new CMatrix();
+}
+// ---------------------------------------------------------
+// CPlayer::SetMouseRot(float rot)
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::SetMouseRot(float rot)
+{
+	m_mouseRot = rot;
+	m_yRot+=m_mouseRot;
+}
+// ---------------------------------------------------------
+// CPlayer::SetPosition(CVector pos)
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::SetPosition(CVector pos)
+{
+	m_pos.m_x = pos.m_x;
+	m_pos.m_y = pos.m_y;
+	m_pos.m_z = pos.m_z;
+
+	s->SetPosition(-m_pos.m_x, m_pos.m_y - 3, -m_pos.m_z - 20);
+	s->SetRotation(0,0,0);
+}
+// ---------------------------------------------------------
+// CPlayer::SetPhysicWorld(NewtonWorld *newton)
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::SetPhysicWorld(NewtonWorld *newton)
+{
+	m_physicWorld = newton;
+}
+// ---------------------------------------------------------
+// void PhysicsApplyForceAndTorque(const NewtonBody *body)
+// 
+// ---------------------------------------------------------
+//
+void PhysicsApplyForceAndTorque(const NewtonBody *body)
+{
+	float mass;
+	float Ixx;
+	float Iyy;
+	float Izz;
+
+	NewtonBodyGetMassMatrix (body, &mass, &Ixx, &Iyy, &Izz);
+	float  force[4] = {0 ,0, 0.0f};
+	NewtonBodySetForce (body, force);
+}
+// ---------------------------------------------------------
+// CPlayer::getCamera()
+// 
+// ---------------------------------------------------------
+//
+CCamera *CPlayer::getCamera()
+{
+
+	return s;
+}
+// ---------------------------------------------------------
+// CPlayer::Init()
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::Init()
+{
+	m_matrix = new CMatrix();
+	NewtonCollision* collision; 
+
+	collision = NewtonCreateBox(m_physicWorld, 2.0f, 2.0f, 2.0f, NULL); 
+	m_physicBody = NewtonCreateBody (m_physicWorld, collision);
+	NewtonReleaseCollision(m_physicWorld, collision);
+
+	NewtonBodySetMassMatrix(m_physicBody, 1, 1.0f, 1.0f, 1);
+
+	m_matrix->Translate(m_pos.m_x, m_pos.m_y, m_pos.m_z);
+	NewtonBodySetMatrix (m_physicBody, m_matrix->matrix); //set matrix 
+
+	NewtonBodySetForceAndTorqueCallback(m_physicBody, PhysicsApplyForceAndTorque);
+
+}
+// ---------------------------------------------------------
+// CPlayer::Render()
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::Render()
+{
+	glLoadIdentity();
+	
+	s->Render();
+
+
+	NewtonBodyGetMatrix(m_physicBody, m_matrix2.matrix);
+	glMultMatrixf(m_matrix2.matrix);
+	glRotatef(90,0,1,0);
+	glRotatef(m_yRot,0,-1,0);
+
+	glColor3ub(255,0,0);
+	auxSolidTeapot(2);
+
+
+	
+}
+// ---------------------------------------------------------
+// CPlayer::Update()
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::Update()
+{
+		
+
+
+}
+// ---------------------------------------------------------
+// CPlayer::MoveForward()
+// 
+// ---------------------------------------------------------
+//
+float vv[3] = {0,0,1};
+float ss[3] = {0,0,1};
+float ss2[3] = {0,0,-10};
+void CPlayer::MoveForward()
+{
+	m_vx = -sin(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+	m_vz = cos(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+	m_pos.m_x -= m_vx;
+	m_pos.m_z -= m_vz;
+	s->Position.x = -m_pos.m_x;;
+	s->Position.z = -m_pos.m_z - 20;
+
+			NewtonBodySetVelocity(m_physicBody,vv);
+			NewtonAddBodyImpulse(m_physicBody, ss, ss2);
+	
+
+}
+// ---------------------------------------------------------
+// CPlayer::MoveDown()
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::MoveDown()
+{
+	m_vx = -sin(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+	m_vz = cos(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+	
+	m_pos.m_x += m_vx;
+	m_pos.m_z += m_vz;
+	s->Position.x = -m_pos.m_x;;
+	s->Position.z = -m_pos.m_z - 20;
+}

@@ -1,0 +1,8 @@
+<html> <head>  
+Typhoon log File
+[[Section]] :  Window 
+ + [Succes] : Create Window 
+ + [Succes] : Create control's 
+ + [Succes] : Show window 
+ + [Succes] : Close window 
+FINISH : logging 

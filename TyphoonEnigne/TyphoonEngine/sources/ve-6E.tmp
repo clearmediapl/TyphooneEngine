@@ -1,0 +1,214 @@
+#include "CPlayer.h"
+#include "CCamera.h"
+
+// ---------------------------------------------------------
+// CPlayer::CPlayer()
+// constructor
+// ---------------------------------------------------------
+//
+CPlayer::CPlayer()
+{
+
+	m_yRot = 0;
+
+	m_camera = new CCamera();
+}	
+// ---------------------------------------------------------
+// CPlayer::SetPosition(CVector pos)
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::SetPosition(CVector pos)
+{
+	m_pos.m_x = pos.m_x;
+	m_pos.m_y = pos.m_y;
+	m_pos.m_z = pos.m_z;
+
+
+
+}
+// ---------------------------------------------------------
+// CPlayer::SetMouseRot(float rot)
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::SetMouseRot(float rot)
+{
+	m_yRot += rot * 0.2;;
+}
+// ---------------------------------------------------------
+// CPlayer::SetPhysicWorld(NewtonWorld *newton)
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::SetPhysicWorld(NewtonWorld *newton)
+{
+	m_physicWorld = newton;
+}
+// ---------------------------------------------------------
+// CPlayer::getCamera()
+// 
+// ---------------------------------------------------------
+//
+CCamera *CPlayer::getCamera()
+{
+	return m_camera;
+}
+
+// ---------------------------------------------------------
+// PhysicsApplyForceAndTorque
+// 
+// ---------------------------------------------------------
+//
+void PhysicsApplyForceAndTorque (const NewtonBody* body)
+{
+	float mass;
+	float Ixx;
+	float Iyy;
+	float Izz;
+
+	NewtonBodyGetMassMatrix (body, &mass, &Ixx, &Iyy, &Izz);
+	float  force[4] = {1 ,0, 0};
+	NewtonBodySetForce (body, force);
+
+	
+}
+// ---------------------------------------------------------
+// CPlayer::Init()
+// 
+// ---------------------------------------------------------
+//
+
+void CPlayer::Init()
+{
+	NewtonCollision* collision;
+
+	
+	collision = NewtonCreateBox(m_physicWorld, 2.0f, 2.0f, 2.0f, NULL); 
+	m_physicBody = NewtonCreateBody(m_physicWorld, collision);
+	NewtonReleaseCollision (m_physicWorld, collision);
+	NewtonBodySetMassMatrix (m_physicBody, 10, 10.0f, 10.0f, 10); // mass and intereia
+		
+	CMatrix matrix;
+	matrix.Translate(m_pos);
+	NewtonBodySetMatrix (m_physicBody, matrix.matrix); //set matrix
+
+
+
+	NewtonBodySetForceAndTorqueCallback(m_physicBody, PhysicsApplyForceAndTorque);
+	
+
+
+	m_camera->SetPosition(m_pos.m_x, m_pos.m_y - 5, m_pos.m_z - 15);
+	m_camera->SetRotation(0,0,0);
+}
+// ---------------------------------------------------------
+// CPlayer::Render()
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::Render()
+{
+	glLoadIdentity();
+	NewtonBodyGetMatrix(m_physicBody, m_matrix.matrix);
+
+	m_camera->Render();
+
+	glMultMatrixf(m_matrix.matrix);
+	glRotatef(90,0,1,0);
+	glRotatef(m_yRot,0,1,0);
+		
+	glColor3ub(255,0,0);
+	auxSolidTeapot(2);
+
+
+}
+// ---------------------------------------------------------
+// CPlayer::Update()
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::Update()
+{
+	NewtonUpdate(m_physicWorld, 0.3);
+		
+
+}
+// ---------------------------------------------------------
+// CPlayer::
+// 
+// ---------------------------------------------------------
+//
+float vv[3] = {0,0,3};
+float ss[3] = {0,0,-20};
+float ss2[3] = {0,0,-10};
+
+
+void CPlayer::MoveForward()
+{
+
+		m_vx = -sin(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+		m_vz = cos(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+	
+/*
+		m_pos.m_x += m_vx*0.3;
+		m_pos.m_z -= m_vz*0.3;
+
+		m_camera->Position.x = - m_pos.m_x;
+		m_camera->Position.z = - m_pos.m_z - 20;
+*/
+	vv[0] += m_vx;
+
+		NewtonBodySetVelocity(m_physicBody,vv);
+		NewtonAddBodyImpulse(m_physicBody, ss, ss2);
+
+
+}
+// ---------------------------------------------------------
+// CPlayer::
+// 
+// ---------------------------------------------------------
+//
+void CPlayer::MoveDown()
+{
+		m_vx = -sin(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+		m_vz = cos(DEGTORAD(m_yRot))*cos(DEGTORAD(0));
+	
+
+		m_pos.m_x -= m_vx*0.3;
+		m_pos.m_z += m_vz*0.3;
+
+		m_camera->Position.x = - m_pos.m_x;
+		m_camera->Position.z = - m_pos.m_z -20;
+
+}
+// ---------------------------------------------------------
+// CPlayer::
+// 
+// ---------------------------------------------------------
+//
+
+
+// ---------------------------------------------------------
+// CPlayer::
+// 
+// ---------------------------------------------------------
+//
+
+// ---------------------------------------------------------
+// CPlayer::
+// 
+// ---------------------------------------------------------
+//
+
+// ---------------------------------------------------------
+// CPlayer::
+// 
+// ---------------------------------------------------------
+//
+
+// ---------------------------------------------------------
+// CPlayer::
+// 
+// ---------------------------------------------------------
+//

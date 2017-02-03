@@ -1,0 +1,301 @@
+#include "C3ds.h"
+
+#define PRIMARY_ID   0x4D4D
+
+// Main Chunks
+#define OBJECTINFO    0x3D3D	
+#define OBJECTNAME	  0x4000
+
+#define TRIANGULAR_MESH  0x4100  
+
+
+#define OBJECT_VERTICES     0x4110	
+#define OBJECT_FACES        0x4120 
+#define OBJECT_MATERIAL     0x4130 
+#define OBJECT_UV			0x4140			
+
+#define MATERIAL_BLOCK 0xAFFF
+//material chunks
+#define MATMAPFILE    0xA300
+#define MATNAME       0xA000				
+#define MATDIFFUSE    0xA020				
+#define MATMAP        0xA200				
+#define MATMAPFILE    0xA300
+
+
+
+int buffer[50000] = {0};
+// ---------------------------------------------------------
+// C3ds::C3ds(TCHAR *path)
+// constructor
+// ---------------------------------------------------------
+//
+C3ds::C3ds(TCHAR *path)
+{
+	//default values
+	bytesRead = 0;
+	m_NumberOfVertex = 0;
+	m_NumberOfFace = 0;
+	index = 0;
+
+
+	//create mesh
+	m_Mesh = new Mesh();
+
+	
+	m_file = _wfopen(path,TEXT("rb")); // open the 3ds file
+
+	ReadChunk(&m_MainChunk); //read first chunk
+	bytesRead += 6;
+
+	if(m_MainChunk.ID != PRIMARY_ID) //are we have 3ds?
+	{
+		printf("no");
+	}
+	else //yes
+	{
+		printf("yes 3ds file! Start reading \n");
+		Read3ds(); //read 3ds file
+	}
+	printf("File size : %d\n", m_MainChunk.lenght); //lenght of file
+
+	fclose(m_file); //close file
+
+
+}
+// ---------------------------------------------------------
+// C3ds::GetString(char *pBuffer)
+// 
+// ---------------------------------------------------------
+//
+int C3ds::GetString(TCHAR *pBuffer)
+{
+	int index = 0;
+	
+	fread(pBuffer, 1, 1, m_file);
+	
+	while (*(pBuffer + index++) != 0) 
+	{
+		fread(pBuffer + index, 1, 1, m_file);
+	}
+	
+	return wcslen(pBuffer) + 1;
+}
+// ---------------------------------------------------------
+// C3ds::Read3ds()
+// Read 3ds data
+// ---------------------------------------------------------
+//
+bool C3ds::Read3ds()
+{
+	
+	
+	m_Current = new Chunk();
+	
+	//main loop of load
+	while(bytesRead < m_MainChunk.lenght) // we have data to read?
+	{
+		ReadChunk(m_Current); // read chunk header
+		
+
+		printf("current chunk size : %d \n", m_Current->lenght);
+
+		switch(m_Current->ID) // read chunks
+		{
+			/*
+				MATERIAL CHUNKS
+			*/
+			case OBJECT_MATERIAL :
+				SkipChunk(m_Current);
+				break;
+			case OBJECT_UV:
+				ReadUV();
+				break;
+			case MATERIAL_BLOCK: //start material block
+				break;
+			case MATNAME : //skip mateiral name
+				SkipChunk(m_Current);
+				break;
+			case MATMAP :
+				break;
+			case MATMAPFILE :
+				bytesRead += 6;
+				bytesRead += GetString(m_Mesh->m_textureName);
+				MessageBox(NULL,m_Mesh->m_textureName, _T(""),MB_OK);
+				break;
+
+
+
+			/*
+				OBJECT CHUNKS
+			*/
+			case OBJECTINFO :
+				printf("Yeah! object info1 \n");
+				break;
+			case OBJECTNAME :
+				bytesRead += 6;
+				bytesRead += GetString(m_Mesh->m_name);
+				printf("name is %s \n",m_Mesh->m_name);
+				break;
+			case TRIANGULAR_MESH:
+				break;
+			case OBJECT_VERTICES :
+				ReadVertex();
+				break;
+			case OBJECT_FACES :
+				ReadFaces();
+				break;
+
+
+			default :
+				SkipChunk(m_Current);	
+					break;
+		}
+	}
+
+
+	return true;
+}
+// ---------------------------------------------------------
+// C3ds::ReadChunk(Chunk *src)
+// read chunk header
+// ---------------------------------------------------------
+//
+bool C3ds::ReadChunk(Chunk *src)
+{
+	fread(&src->ID, 1, 2, m_file); // read id of chunk
+	fread(&src->lenght, 1, 4, m_file); // read lenght of chunk
+
+	return true;
+}
+// ---------------------------------------------------------
+// C3ds::SkipChunk(Chunk *src)
+// Skip vertex
+// ---------------------------------------------------------
+//
+void C3ds::SkipChunk(Chunk *src)
+{
+	  bytesRead += 6;
+	  bytesRead += fread(buffer, 1, m_Current->lenght - 6, m_file); 
+}
+// ---------------------------------------------------------
+// C3ds::ReadVertex()
+// Read vertex
+// ---------------------------------------------------------
+//
+bool C3ds::ReadVertex()
+{
+	bytesRead += 6;
+	bytesRead += fread(&m_NumberOfVertex, 1, 2, m_file); 
+	printf("Yeah! msh info \n");
+	printf("number of vertices %d \n", m_NumberOfVertex);
+
+	m_Mesh->m_vertex = new tVector[m_NumberOfVertex];
+				
+	
+	bytesRead += fread(m_Mesh->m_vertex, 1, m_NumberOfVertex * sizeof(tVector) ,m_file);
+
+
+
+	return TRUE;
+}
+// ---------------------------------------------------------
+// C3ds::ReadFaces()
+// Read faces
+// ---------------------------------------------------------
+//
+void C3ds::ReadFaces()
+{
+	  bytesRead += 6;
+	  bytesRead += fread(&m_NumberOfFace, 1, 2, m_file); 
+	
+	  printf("Number of faces %d \n", m_NumberOfFace);
+
+	  m_Mesh->m_indices = new tFace [m_NumberOfFace];
+
+	  for(int i = 0; i < m_NumberOfFace; i++)
+	  {
+			for(int j = 0; j < 4; j++)
+			{
+				bytesRead += fread(&index, 1,sizeof(index), m_file);
+							
+					if(j < 3)
+					{
+						m_Mesh->m_indices[i].vertIndex[j] = index;
+						printf("%d \n", index);
+								
+					}
+			}
+	  }			
+}
+// ---------------------------------------------------------
+// C3ds::ReadUv()
+// Render coords
+// ---------------------------------------------------------
+//
+void C3ds::ReadUV()
+{
+	 bytesRead += 6;
+	 bytesRead += fread(&m_NumberOfCoord,1,2,m_file);
+	 m_Mesh->m_coords = new tUV[m_NumberOfCoord];
+	 bytesRead+= fread(m_Mesh->m_coords, 1, m_NumberOfCoord *8,m_file);
+
+	
+
+
+}
+// ---------------------------------------------------------
+// C3ds::Init()
+// Init mesh
+// ---------------------------------------------------------
+//
+void C3ds::Init()
+{	
+	glEnable(GL_TEXTURE_2D);
+
+	m_texture = new CTexture();
+	//m_texture->defaultPath = true;
+	if(!m_texture->LoadJPG(_T("c:\\kora.jpg"), m_texID))
+	{
+	}
+
+
+}
+// ---------------------------------------------------------
+// C3ds::Render()
+// Render mesh
+// ---------------------------------------------------------
+//
+void C3ds::Render()
+{
+	
+	glBindTexture(GL_TEXTURE_2D, m_texID);
+
+	
+	for(int j = 0; j < m_NumberOfFace; j++)
+		{
+			glBegin(GL_TRIANGLES);	
+			for(int whichVertex = 0; whichVertex < 3; whichVertex++)
+			{
+				int index = m_Mesh->m_indices[j].vertIndex[whichVertex];
+			//	glTexCoord2f(m_Mesh->m_coords[index].u, m_Mesh->m_coords[index].v);
+				glVertex3f(m_Mesh->m_vertex[ index ].x, m_Mesh->m_vertex[ index ].y, m_Mesh->m_vertex[ index ].z);
+			}
+			glEnd();
+	}
+
+
+
+
+}
+// ---------------------------------------------------------
+// C3ds::~C3ds()
+// deconstructor
+// ---------------------------------------------------------
+//
+C3ds::~C3ds()
+{
+	delete m_Mesh;
+
+
+}

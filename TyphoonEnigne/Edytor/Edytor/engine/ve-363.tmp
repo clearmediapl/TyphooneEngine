@@ -1,0 +1,45 @@
+#include "CCamera.h"
+
+CCamera::CCamera()
+{
+
+}
+void CCamera::SetPosition(float x, float y, float z)
+{
+	Position.x = x;
+	Position.y = y;
+	Position.z = z;
+}
+void CCamera::SetRotation(float x, float y, float z)
+{
+
+	Rotate.x = x;
+	Rotate.y = y;
+	Rotate.z = z;
+
+}
+void CCamera::SetPerspective()
+{
+	SetPosition(0,0,-30);
+	SetRotation(0,0,0);
+}
+void CCamera::SetTop()
+{
+	SetPosition(0,30,0.9);
+	SetRotation(-90,0,0);
+}
+void CCamera::Render()
+{
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+
+	glRotatef(Rotate.x,1,0,0);
+	glRotatef(Rotate.y,0,1,0);
+	glRotatef(Rotate.z,0,0,1);
+	glTranslatef(Position.x, Position.y, Position.z);
+
+	
+
+
+}
